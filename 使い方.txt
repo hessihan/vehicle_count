@@ -1,0 +1,11 @@
+cd vehicle_count
+pip install -r requirements.txt
+
+cd vehicle_count/src/Yolov5_DeepSort_Pytorch
+python track.py --source ../../images/sample/vid_1.mp4 --yolo_model yolov5s.pt --project ../../track_result --class 0 1 2 3 5 7 --save-txt --save-vid
+
+cd vehicle_count
+python src/zone_writer/my_gui_opencvwin.py
+
+cd vehicle_count
+python src/counter/counter_pipeline.py --fpass /track_result/exp4/vid_1 --vlpass /vline/vline_info.json

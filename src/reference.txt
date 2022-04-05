@@ -1,0 +1,21 @@
+https://pythonrepo.com/repo/mikel-brostrom-Yolov5_DeepSort_Pytorch-python-deep-learning
+https://github.com/mikel-brostrom/Yolov5_DeepSort_Pytorch
+https://github.com/kaylode/vehicle-counting
+https://github.com/John1liu/YOLOV5-DeepSORT-Vehicle-Tracking-Master
+https://github.com/dyh/unbox_yolov5_deepsort_counting
+https://pythonrepo.com/repo/duongttr-vehicles-counting-yolov4-deepsort-python-deep-learning
+https://farml1.com/object_counter/
+https://farml1.com/object_tracking/
+https://www.aicitychallenge.org/
+
+# coco dataset labels
+https://tech.amikelive.com/node-718/what-object-categories-labels-are-in-coco-dataset/
+
+# MOT format
+https://motchallenge.net/instructions/
+
+# save label for multiple class tracking
+https://github.com/mikel-brostrom/Yolov5_DeepSort_Pytorch/issues/55
+
+# test yolov5 * deepSORT colab file
+https://colab.research.google.com/drive/1-AkrpryhF0KnDRhUNrcJ9toSwUAWC81X?authuser=2
