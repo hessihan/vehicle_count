@@ -18,6 +18,8 @@ from pathlib import Path
 import cv2
 import torch
 import torch.backends.cudnn as cudnn
+from collections import deque # for drawing motion path (trajectory)
+import numpy as np # for drawing motion path (trajectory)
 
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.downloads import attempt_download
@@ -109,6 +111,11 @@ def detect(opt):
     if pt and device.type != 'cpu':
         model(torch.zeros(1, 3, *imgsz).to(device).type_as(next(model.model.parameters())))  # warmup
     dt, seen = [0.0, 0.0, 0.0, 0.0], 0
+
+    t0 = time.time() # check track inference fps
+    
+    pts = [deque(maxlen=10) for _ in range(9999)] # for drawing motion path (trajectory)
+
     for frame_idx, (path, img, im0s, vid_cap, s) in enumerate(dataset):
         t1 = time_sync()
         img = torch.from_numpy(img).to(device)
@@ -176,6 +183,29 @@ def detect(opt):
                         label = f'{id} {names[c]} {conf:.2f}'
                         annotator.box_label(bboxes, label, color=colors(c, True))
 
+                        # draw motion path ############################################################
+                        # https://github.com/mikel-brostrom/Yolov5_DeepSort_Pytorch/issues/221#issuecomment-1046394030
+
+                        # call center point
+                        x1, y1, x2, y2 = int(bboxes[0]), int(bboxes[1]), int(bboxes[2]), int(bboxes[3])
+                        centerpointX, centerpointY = (x1+x2)/2, (y1+y2)/2
+                        centerpoint = [int(centerpointX), int(centerpointY)]
+
+                        # store center point
+                        pts[id].append(centerpoint)
+
+                        # draw points
+                        cv2.circle(im0, centerpoint, 1, (0,255,0), 2)
+
+                        # draw motion path
+                        for jj in range(1, len(pts[id])):
+                            if pts[id][jj - 1] is None or pts[id][jj] is None:
+                                continue
+                            thickness = int(np.sqrt(64 / float(jj + 1)))
+                            cv2.line(im0,(pts[id][jj-1]), (pts[id][jj]),colors(c, True),thickness)
+
+                        ##############################################################################
+
                         if save_txt:
                             # to MOT format
                             bbox_left = output[0]
@@ -226,7 +256,10 @@ def detect(opt):
         print('Results saved to %s' % save_path)
         if platform == 'darwin':  # MacOS
             os.system('open ' + save_path)
-
+    
+    # track inference time
+    # https://github.com/mikel-brostrom/Yolov5_DeepSort_Pytorch/issues/172
+    print('Done. (track inference time: %.3fs)' % (time.time() - t0))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
