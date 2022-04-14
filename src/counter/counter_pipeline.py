@@ -213,6 +213,11 @@ def count(args):
 
     # merge to main trj df
     df = pd.merge(df, df_vlcross[["id", "vline", "crossed_frame", "crossed_coord"]], how="left", on="id")
+    # drop bb_centroid_y_inv
+    df.drop("bb_centroid_y_inv", axis=1, inplace=True)
+    # invert y for bb coords from csv stile
+    df["bb_top"] = vid_height - df["bb_top"]
+    # save full info trj csv
     df.to_csv(ROOT + fpass + "_trj.csv", index=False)
 
     # count vehicle foe each movement
