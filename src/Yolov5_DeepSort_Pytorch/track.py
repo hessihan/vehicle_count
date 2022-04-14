@@ -189,7 +189,7 @@ def detect(opt):
                         # call center point
                         x1, y1, x2, y2 = int(bboxes[0]), int(bboxes[1]), int(bboxes[2]), int(bboxes[3])
                         centerpointX, centerpointY = (x1+x2)/2, (y1+y2)/2
-                        centerpoint = [int(centerpointX), int(centerpointY)]
+                        centerpoint = (int(centerpointX), int(centerpointY))
 
                         # store center point
                         pts[id].append(centerpoint)

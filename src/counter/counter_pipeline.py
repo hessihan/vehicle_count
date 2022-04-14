@@ -46,10 +46,12 @@ def count(args):
     df = pd.read_table(ROOT + fpass + ".txt", header=None, delimiter=" ")
     # drop x y z columns
     df = df.drop([8, 9, 10], axis=1)
+    # add unique row id
+    df["id"] = df.index
     # add MOT format header + calss + confidence
     # https://github.com/mikel-brostrom/Yolov5_DeepSort_Pytorch/issues/55
     # https://motchallenge.net/instructions/
-    df.columns = ["frame", "id", "bb_left", "bb_top", "bb_width", "bb_height", "class", "conf"]
+    df.columns = ["frame", "obj_id", "bb_left", "bb_top", "bb_width", "bb_height", "class", "conf", "id"]
     # coco dataset class
     # https://tech.amikelive.com/node-718/what-object-categories-labels-are-in-coco-dataset/
     class_name = {0:"person", 1:"bicycle", 2:"car", 3:"motorcycle", 5:"bus", 7:"truck"}
@@ -70,10 +72,13 @@ def count(args):
     df["bb_centroid_y"] = vid_height - df["bb_centroid_y_inv"]
 
     # id is unique within class, make new unique id between every track (class+id)
-    df["clsid"] = df["class"] + df["id"].astype("str")
+    df["clsid"] = df["class"] + df["obj_id"].astype("str")
+
+    # reorder columns
+    df = df[["id", "frame", "class", "obj_id", "clsid", "conf", "bb_left", "bb_top", "bb_width", "bb_height", "bb_centroid_x", "bb_centroid_y_inv", "bb_centroid_y"]]
 
     # save to track result folder
-    df.to_csv(ROOT + fpass + "_trj.csv", index=False)
+    # df.to_csv(ROOT + fpass + "_trj.csv", index=False)
 
     # read reagion info json file
     with open(ROOT + vlpass, 'r') as f:
@@ -88,17 +93,26 @@ def count(args):
     for i in range(len(vline_info)):
         if i < len(vline_info)-1:
             vlnames.append("vl" + str(i))
-            vlcoods.append([vline_info[i], vline_info[i+1]])
+            vlcoods.append([vline_info[i].tolist(), vline_info[i+1].tolist()])
         else:
             vlnames.append("vl" + str(i))
-            vlcoods.append([vline_info[i], vline_info[0]])
-
+            vlcoods.append([vline_info[i].tolist(), vline_info[0].tolist()])
     vlines = dict(zip(vlnames, vlcoods))
 
     # define movement (directions), all possible permutations
     movprm = list(permutations(list(vlines.keys()), 2))
     movnames = ["mov" + str(i) for i in range(len(movprm))]
     movs = dict(zip(movnames, movprm))
+
+    # save vline movement info as json file
+    vlmov_info = [
+        {
+            "virtual_lines": vlines,
+            "movements": movs
+        }
+    ]
+    with open(ROOT + fpass + '_vlmov.json', 'w') as f:
+        json.dump(vlmov_info, f)    
 
     # def show_vline_cv(vline_coords):
     #     window_name = 'Virtual Line'
@@ -174,10 +188,11 @@ def count(args):
                 cross_bool, cross_point = calc_cross_point(p_cur, p_pre, vlines[l][0], vlines[l][1])
                 if cross_bool:
                     intersect_frame = df[df["clsid"] == v].loc[i]["frame"]
-                    df_vlcross_rows.append([v, l, intersect_frame, cross_point])
+                    row_id = df[df["clsid"] == v].loc[i]["id"]
+                    df_vlcross_rows.append([row_id, v, l, intersect_frame, cross_point])
                 else:
                     pass
-        return df_vlcross_rows # ["clsid", "vline", "crossed_frame", "crossed_coord"]
+        return df_vlcross_rows # ["id", "clsid", "vline", "crossed_frame", "crossed_coord"]
 
     def search_vlcross():
         # for loop
@@ -188,12 +203,17 @@ def count(args):
         # https://stackoverflow.com/questions/37418611/convert-a-nested-for-loop-to-a-map-equivalent
         # list conprehension
         df_vlcross = pd.DataFrame(df_vlcross)
-        df_vlcross.columns = ["clsid", "vline", "crossed_frame", "crossed_coord"]
+        df_vlcross.columns = ["id", "clsid", "vline", "crossed_frame", "crossed_coord"]
         return df_vlcross
 
     start_time = time.time()
     df_vlcross = search_vlcross() # maybe slow?, not frame base loop, may not be implemented in realtime situation or sliders in plotly
     print("elapsed time: ", time.time() - start_time)
+    df_vlcross.to_csv(ROOT + fpass + "_crossed.csv", index=False)
+
+    # merge to main trj df
+    df = pd.merge(df, df_vlcross[["id", "vline", "crossed_frame", "crossed_coord"]], how="left", on="id")
+    df.to_csv(ROOT + fpass + "_trj.csv", index=False)
 
     # count vehicle foe each movement
     # if one vehicle crossed the particular vline several times, treat them as crossed once?
@@ -203,7 +223,6 @@ def count(args):
     moved_vehicles = _df_uniquevl.index[
         (df_vlcross.groupby('clsid').nunique()["vline"] == 2) & 
         (df_vlcross.groupby('clsid').count()["vline"] == 2)] # strict filter
-
 
     df_mov_count_rows = [] # ["clsid", "mov", "vl1", "vl2", "vl1_crossed_frame", "vl1_crossed_coord", "vl2_crossed_frame", "vl2_crossed_coord"]
     for v in moved_vehicles:
@@ -221,7 +240,7 @@ def count(args):
         )
 
     df_mov_count = pd.DataFrame(df_mov_count_rows, columns=["clsid", "mov", "vl1", "vl2", "vl1_crossed_frame", "vl1_crossed_coord", "vl2_crossed_frame", "vl2_crossed_coord"])
-    df_mov_count.to_csv(ROOT + fpass + "_count.csv", index=False)
+    df_mov_count.to_csv(ROOT + fpass + "_crossed_strict.csv", index=False)
 
 if __name__ == "__main__":
     # https://stackoverflow.com/questions/7427101/simple-argparse-example-wanted-1-argument-3-results
