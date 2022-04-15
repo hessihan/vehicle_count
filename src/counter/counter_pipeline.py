@@ -215,8 +215,15 @@ def count(args):
     df = pd.merge(df, df_vlcross[["id", "vline", "crossed_frame", "crossed_coord"]], how="left", on="id")
     # drop bb_centroid_y_inv
     df.drop("bb_centroid_y_inv", axis=1, inplace=True)
-    # invert y for bb coords from csv stile
+    # flip y for bb coords from csv stile
     df["bb_top"] = vid_height - df["bb_top"]
+
+    # drop odd id, after merge, id will duplicate if a vehicle cross multiple line at same time
+    df.drop("id", axis=1)
+    # reset index and make a new id col
+    df.reset_index(drop=True)
+    df["id"] = df.index
+
     # save full info trj csv
     df.to_csv(ROOT + fpass + "_trj.csv", index=False)
 
