@@ -101,7 +101,7 @@ def count(args):
 
     # define movement (directions), all possible permutations
     movprm = list(permutations(list(vlines.keys()), 2))
-    movnames = ["mov" + str(i) for i in range(len(movprm))]
+    movnames = ["mov" + str(i[0][-1]) + str(i[1][-1]) for i in movprm]
     movs = dict(zip(movnames, movprm))
 
     # save vline movement info as json file
