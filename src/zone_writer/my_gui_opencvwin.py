@@ -18,6 +18,7 @@ import time
 import numpy as np
 import pandas as pd
 import json
+import os
 
 
 class App():
@@ -93,8 +94,9 @@ class App():
     def openfile(self, frame_id=0):
         f_path = tk.filedialog.askopenfilename(
             title="open file", initialdir="./images", 
-            filetypes=[("Image file", ".mp4 .MP4")])
+            filetypes=[("Image file", ".mp4")]) # don't show "MP4"
         str_file_path = str(f_path) # 絶対パスになっている
+        self.basename = os.path.splitext(os.path.basename(str_file_path))[0] #  basename without ext
         self.log_txt.insert(tk.END, f'open file {str_file_path}\n')
 
         # read video file
@@ -220,10 +222,11 @@ class App():
                     "label": "virtual_line",
                     "coords": self.zone_data
                 }
-            ]            
-            with open('./vline/vline_info.json', 'w') as f:
+            ]
+            vline_save_path = './vline/' + self.basename + '_vline_info.json'   
+            with open(vline_save_path, 'w') as f:
                 json.dump(vline_info, f)
-            self.log_txt.insert(tk.END, 'virtual line saved in ./vline/vline_info.json\n')
+            self.log_txt.insert(tk.END, 'virtual line saved in' + vline_save_path + '\n')
 
         else:
             df = pd.DataFrame(self.saved_direction)
